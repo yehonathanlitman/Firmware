@@ -44,8 +44,10 @@
 #include <px4_module_params.h>
 #include <float.h>
 #include <matrix/matrix/math.hpp>
+#include <uORB/topics/distance_sensor.h>
 #include <uORB/topics/obstacle_distance.h>
 #include <uORB/topics/collision_constraints.h>
+#include <uORB/topics/vehicle_attitude.h>
 #include <mathlib/mathlib.h>
 #include <drivers/drv_hrt.h>
 #include <uORB/topics/mavlink_log.h>
@@ -79,6 +81,9 @@ private:
 	orb_advert_t _mavlink_log_pub{nullptr};	 	/**< Mavlink log uORB handle */
 
 	uORB::SubscriptionPollable<obstacle_distance_s> *_sub_obstacle_distance{nullptr}; /**< obstacle distances received form a range sensor */
+	uORB::SubscriptionPollable<distance_sensor_s>
+	*_sub_distance_sensor[ORB_MULTI_MAX_INSTANCES]; /**< distance data received from onboard rangefinders */
+	uORB::SubscriptionPollable<vehicle_attitude_s> *_sub_vehicle_attitude{nullptr};
 
 	static constexpr uint64_t RANGE_STREAM_TIMEOUT_US{500000};
 	static constexpr uint64_t MESSAGE_THROTTLE_US{5000000};
@@ -97,5 +102,8 @@ private:
 					  const matrix::Vector2f &curr_vel);
 
 	void publishConstrainedSetpoint(const matrix::Vector2f &original_setpoint, const matrix::Vector2f &adapted_setpoint);
+
+	void updateOffboardObstacleDistance(obstacle_distance_s &obstacle);
+	void updateDistanceSensor(obstacle_distance_s &obstacle);
 
 };
