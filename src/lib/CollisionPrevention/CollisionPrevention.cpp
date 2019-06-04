@@ -230,12 +230,9 @@ void CollisionPrevention::calculateConstrainedSetpoint(Vector2f &setpoint,
 			int distances_array_size = sizeof(obstacle.distances) / sizeof(obstacle.distances[0]);
 
 			for (int i = 0; i < distances_array_size; i++) {
-
-				//determine if distance bin is valid and contains a valid distance measurement
-				(double)obstacle.increment_f);
-
+				// TO DO (float)i * obstacle.increment_f < 360.f doesn't work with the offset
 				if (obstacle.distances[i] < obstacle.max_distance &&
-					    obstacle.distances[i] > obstacle.min_distance && i * obstacle.increment_f < 360) {
+				    obstacle.distances[i] > obstacle.min_distance && (float)i * obstacle.increment_f < 360.f) {
 					float distance = obstacle.distances[i] / 100.0f; //convert to meters
 					float angle = math::radians((float)i * obstacle.increment_f);
 
