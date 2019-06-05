@@ -153,6 +153,7 @@ private:
 		(ParamFloat<px4::params::MPC_SPOOLUP_TIME>) _param_mpc_spoolup_time, /**< time to let motors spool up after arming */
 		(ParamFloat<px4::params::MPC_TILTMAX_LND>) _param_mpc_tiltmax_lnd, /**< maximum tilt for landing and smooth takeoff */
 		(ParamFloat<px4::params::MPC_THR_HOVER>)_param_mpc_thr_hover,
+		(ParamFloat<px4::params::MPC_THR_MIN>) _param_mpc_thr_min,
 		(ParamFloat<px4::params::MPC_Z_VEL_P>)_param_mpc_z_vel_p
 	);
 
@@ -607,20 +608,6 @@ MulticopterPositionControl::run()
 			} else {
 				setpoint = _flight_tasks.getPositionSetpoint();
 				_failsafe_land_hysteresis.set_state_and_update(false, time_stamp_current);
-
-				// Check if position, velocity or thrust pairs are valid -> trigger failsaife if no pair is valid
-				if (!(PX4_ISFINITE(setpoint.x) && PX4_ISFINITE(setpoint.y)) &&
-				    !(PX4_ISFINITE(setpoint.vx) && PX4_ISFINITE(setpoint.vy)) &&
-				    !(PX4_ISFINITE(setpoint.acceleration[0]) && PX4_ISFINITE(setpoint.acceleration[1])) &&
-				    !(PX4_ISFINITE(setpoint.thrust[0]) && PX4_ISFINITE(setpoint.thrust[1]))) {
-					failsafe(setpoint, _states, true, !was_in_failsafe);
-				}
-
-				// Check if altitude, climbrate or thrust in D-direction are valid -> trigger failsafe if none
-				// of these setpoints are valid
-				if (!PX4_ISFINITE(setpoint.z) && !PX4_ISFINITE(setpoint.vz) && !PX4_ISFINITE(setpoint.acceleration[2]) && !PX4_ISFINITE(setpoint.thrust[2])) {
-					failsafe(setpoint, _states, true, !was_in_failsafe);
-				}
 			}
 
 			publish_trajectory_sp(setpoint);
@@ -681,7 +668,11 @@ MulticopterPositionControl::run()
 			_control.setState(_states);
 			_control.setInputSetpoint(setpoint);
 			_control.setConstraints(constraints);
-			_control.update(_dt);
+			if (!_control.update(_dt)) {
+				failsafe(setpoint, _states, true, !was_in_failsafe);
+				_control.setInputSetpoint(setpoint);
+				_control.update(_dt);
+			}
 
 			// Get position control output
 			vehicle_local_position_setpoint_s local_pos_sp{};
@@ -957,12 +948,16 @@ MulticopterPositionControl::failsafe(vehicle_local_position_setpoint_s &setpoint
 			// We have a valid velocity in D-direction.
 			// descend downwards with landspeed.
 			setpoint.vz = _param_mpc_land_speed.get();
+			setpoint.acceleration[0] = setpoint.acceleration[1] = 0.0f;
 			setpoint.thrust[0] = setpoint.thrust[1] = 0.0f;
 			if (warn) {
 				PX4_WARN("Failsafe: Descend with land-speed.");
 			}
 
 		} else {
+			const float failsafe_thrust = -(_param_mpc_thr_min.get() + (_param_mpc_thr_hover.get() - _param_mpc_thr_min.get()) * 0.7f);
+			Vector3f(0,0,failsafe_thrust).copyTo(setpoint.thrust);
+			Vector3f(0,0,0.3).copyTo(setpoint.acceleration);
 			// Use the failsafe from the PositionController.
 			if (warn) {
 				PX4_WARN("Failsafe: Descend with just attitude control.");
