@@ -40,6 +40,7 @@
 #include <mathlib/mathlib.h>
 #include "Utility/ControlMath.hpp"
 #include <px4_defines.h>
+#include <drivers/drv_hrt.h>
 
 using namespace matrix;
 
@@ -318,6 +319,88 @@ void PositionControl::_velocityController(const float &dt)
 				       + _thr_int(0) + thr_ff(0);
 		thrust_desired_NE(1) = _param_mpc_xy_vel_p.get() * vel_err(1) + _param_mpc_xy_vel_d.get() * _vel_dot(1)
 				       + _thr_int(1) + thr_ff(1);
+
+		if (_param_mpc_xy_vel_atune.get()) {
+			static int convergence_counter = 0;
+			const float amplitude_max = 0.2f;
+			static float ku = 1.5;
+			float error = vel_err(0) * ku;
+			float vel_err_sat = error;
+
+			// Saturation block
+			if (error > amplitude_max) {
+				vel_err_sat = 0.2f;
+
+			} else if (error < -amplitude_max) {
+				vel_err_sat = -0.2f;
+			}
+
+			thrust_desired_NE(0) = vel_err_sat;
+			thrust_desired_NE(1) = 0.f;
+
+			if (convergence_counter < 500) {
+				// epsilon << a
+				const float epsilon = 0.0001f;
+				const float a = 0.05f;
+				float ku_dot = -a * fabsf(error - vel_err_sat) + epsilon;
+				printf("ku = %.3f\n, ku_dot = %.3f\n", (double)ku, (double)ku_dot);
+				ku += ku_dot;
+
+				if (fabs(ku_dot) < 0.002f && ku < 1.4f) {
+					convergence_counter++;
+
+				} else {
+					convergence_counter = 0;
+				}
+
+			} else {
+				// Ultimate gain found, start counting periods
+				static int state = 0;
+				static int state_prev = 0;
+				static int peak_counter = 0;
+
+				if (error > 0.9f * amplitude_max) {
+					state_prev = state;
+					state = 1;
+
+				} else if (error < -0.9f * amplitude_max) {
+					state_prev = state;
+					state = -1;
+				}
+
+				static hrt_abstime start_time = 0;
+
+				if (state != state_prev) {
+					peak_counter++;
+
+					if (state_prev == 0) {
+						start_time = hrt_absolute_time();
+					}
+
+					printf("Peak counter = %d\n", peak_counter);
+				}
+
+				if (peak_counter == 11) {
+					// 5 periods
+					float period_u = hrt_elapsed_time(&start_time) * 2e-7;
+					printf("Period: %.3f seconds\n", (double)period_u);
+
+					// Compute Kp, Ki and Kd using Ziegler-Nichols rules
+					float kp = 0.6f * ku;
+					float ki = 2.f * kp / period_u;
+					float kd = kp * period_u / 8.f;
+					printf("Kp = %.3f\tKi =%.3f\tKd = %.3f\n", (double)kp, (double)ki, (double)kd);
+					_param_mpc_xy_vel_p.set(kp);
+					_param_mpc_xy_vel_p.commit_no_notification();
+					_param_mpc_xy_vel_i.set(ki);
+					_param_mpc_xy_vel_i.commit_no_notification();
+					_param_mpc_xy_vel_d.set(kd);
+					_param_mpc_xy_vel_d.commit_no_notification();
+					_param_mpc_xy_vel_atune.set(false);
+					_param_mpc_xy_vel_atune.commit_no_notification();
+				}
+			}
+		}
 
 		// Get maximum allowed thrust in NE based on tilt and excess thrust.
 		float thrust_max_NE_tilt = fabsf(_thr_sp(2)) * tanf(_constraints.tilt);
