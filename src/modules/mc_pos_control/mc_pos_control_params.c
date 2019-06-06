@@ -243,6 +243,16 @@ PARAM_DEFINE_FLOAT(MPC_XY_VEL_D, 0.01f);
 PARAM_DEFINE_INT32(MPC_XY_VEL_ATUNE, 0);
 
 /**
+ * Controller global gain
+ *
+ * @min 0.01
+ * @max 5.0
+ * @decimal 2
+ * @group Multicopter Position Control
+ */
+PARAM_DEFINE_FLOAT(MPC_XY_VEL_KC, 1.f);
+
+/**
  * Cutoff frequency for the low pass filter on the acceleration feedforward of the PID velocity controller
  *
  * The velocity controller can use acceleration as a feedforward to improve tracking performance. However,

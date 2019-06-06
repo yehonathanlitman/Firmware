@@ -279,6 +279,14 @@ void PositionControl::_velocityController(const float &dt)
 	const Vector3f thr_ff = _acc_sp_filtered * _param_mpc_thr_hover.get() / CONSTANTS_ONE_G;
 
 	const Vector3f vel_err = _vel_sp - _vel;
+	static Vector3f vel_err_prev{};
+	const Vector3f vel_err_dot = (vel_err - vel_err_prev) / dt;
+	vel_err_prev = vel_err;
+
+	static Vector3f vel_err_dot_filtered{};
+	const float omega_c = M_TWOPI_F * 10.f;
+	const float alpha =  omega_c * dt / (1 + omega_c * dt);
+	vel_err_dot_filtered = alpha * vel_err_dot + (1 - alpha) * vel_err_dot_filtered;
 
 	// Consider thrust in D-direction.
 	float thrust_desired_D = _param_mpc_z_vel_p.get() * vel_err(2) +  _param_mpc_z_vel_d.get() * _vel_dot(2)
@@ -315,9 +323,9 @@ void PositionControl::_velocityController(const float &dt)
 	} else {
 		// PID-velocity controller for NE-direction.
 		Vector2f thrust_desired_NE;
-		thrust_desired_NE(0) = _param_mpc_xy_vel_p.get() * vel_err(0) + _param_mpc_xy_vel_d.get() * _vel_dot(0)
+		thrust_desired_NE(0) = _param_mpc_xy_vel_p.get() * vel_err(0) * _param_mpc_xy_vel_kc.get() + _param_mpc_xy_vel_d.get() * vel_err_dot_filtered(0) * _param_mpc_xy_vel_kc.get()
 				       + _thr_int(0) + thr_ff(0);
-		thrust_desired_NE(1) = _param_mpc_xy_vel_p.get() * vel_err(1) + _param_mpc_xy_vel_d.get() * _vel_dot(1)
+		thrust_desired_NE(1) = _param_mpc_xy_vel_p.get() * vel_err(1) * _param_mpc_xy_vel_kc.get() + _param_mpc_xy_vel_d.get() * vel_err_dot_filtered(1) * _param_mpc_xy_vel_kc.get()
 				       + _thr_int(1) + thr_ff(1);
 
 		if (_param_mpc_xy_vel_atune.get()) {
@@ -431,8 +439,8 @@ void PositionControl::_velocityController(const float &dt)
 		vel_err_lim(1) = vel_err(1) - (thrust_desired_NE(1) - _thr_sp(1)) * arw_gain;
 
 		// Update integral
-		_thr_int(0) += _param_mpc_xy_vel_i.get() * vel_err_lim(0) * dt;
-		_thr_int(1) += _param_mpc_xy_vel_i.get() * vel_err_lim(1) * dt;
+		_thr_int(0) += _param_mpc_xy_vel_i.get() * vel_err_lim(0) * dt * _param_mpc_xy_vel_kc.get();
+		_thr_int(1) += _param_mpc_xy_vel_i.get() * vel_err_lim(1) * dt * _param_mpc_xy_vel_kc.get();
 	}
 }
 

@@ -255,6 +255,7 @@ private:
 		(ParamFloat<px4::params::MPC_XY_VEL_I>) _param_mpc_xy_vel_i,
 		(ParamFloat<px4::params::MPC_XY_VEL_D>) _param_mpc_xy_vel_d,
 		(ParamBool<px4::params::MPC_XY_VEL_ATUNE>) _param_mpc_xy_vel_atune,
+		(ParamFloat<px4::params::MPC_XY_VEL_KC>) _param_mpc_xy_vel_kc,
 		(ParamFloat<px4::params::MPC_A_FF_CUTOFF>) _param_mpc_a_ff_cutoff
 
 	)
