@@ -322,17 +322,17 @@ void PositionControl::_velocityController(const float &dt)
 
 		if (_param_mpc_xy_vel_atune.get()) {
 			static int convergence_counter = 0;
-			const float amplitude_max = 0.2f;
+			const float amplitude_max = 0.1f;
 			static float ku = 1.5;
 			float error = vel_err(0) * ku;
 			float vel_err_sat = error;
 
 			// Saturation block
 			if (error > amplitude_max) {
-				vel_err_sat = 0.2f;
+				vel_err_sat = amplitude_max;
 
 			} else if (error < -amplitude_max) {
-				vel_err_sat = -0.2f;
+				vel_err_sat = -amplitude_max;
 			}
 
 			thrust_desired_NE(0) = vel_err_sat;
@@ -386,16 +386,21 @@ void PositionControl::_velocityController(const float &dt)
 					printf("Period: %.3f seconds\n", (double)period_u);
 
 					// Compute Kp, Ki and Kd using Ziegler-Nichols rules
-					float kp = 0.6f * ku;
-					float ki = 2.f * kp / period_u;
-					float kd = kp * period_u / 8.f;
+					float kp = 0.3f * ku;
+					float ki = kp / period_u;
+					float kd = kp * period_u * 0.125f;
 					printf("Kp = %.3f\tKi =%.3f\tKd = %.3f\n", (double)kp, (double)ki, (double)kd);
-					_param_mpc_xy_vel_p.set(kp);
-					_param_mpc_xy_vel_p.commit_no_notification();
-					_param_mpc_xy_vel_i.set(ki);
-					_param_mpc_xy_vel_i.commit_no_notification();
-					_param_mpc_xy_vel_d.set(kd);
-					_param_mpc_xy_vel_d.commit_no_notification();
+					if (kp > 0.f && kp < 1.f && ki > 0.f && ki < 4.f && kd > 0.f && kd < 0.1f) {
+						_param_mpc_xy_vel_p.set(kp);
+						_param_mpc_xy_vel_p.commit_no_notification();
+						_param_mpc_xy_vel_i.set(ki);
+						_param_mpc_xy_vel_i.commit_no_notification();
+						_param_mpc_xy_vel_d.set(kd);
+						_param_mpc_xy_vel_d.commit_no_notification();
+
+					} else {
+						printf("Autotuning failed");
+					}
 					_param_mpc_xy_vel_atune.set(false);
 					_param_mpc_xy_vel_atune.commit_no_notification();
 				}
