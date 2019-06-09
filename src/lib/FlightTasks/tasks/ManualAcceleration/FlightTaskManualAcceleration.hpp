@@ -46,11 +46,9 @@
 class FlightTaskManualAcceleration : public FlightTaskManual
 {
 public:
-	FlightTaskManualAcceleration();
-
+	FlightTaskManualAcceleration() = default;
 	virtual ~FlightTaskManualAcceleration() = default;
 	bool activate() override;
-	bool updateInitialize() override;
 	bool update() override;
 
 protected:

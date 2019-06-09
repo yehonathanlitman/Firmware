@@ -62,6 +62,8 @@ vehicle_attitude_setpoint_s thrustToAttitude(const matrix::Vector3f &thr_sp, con
 vehicle_attitude_setpoint_s accelerationToAttitude(const matrix::Vector3f &acc_sp, const float yaw_sp,
 		const float hover_thrust);
 
+void limitTilt(matrix::Vector3f &body, const matrix::Vector3f &world, const float max_angle);
+
 /**
  * Converts a body z vector and yaw set-point to a desired attitude.
  * @param body_z a world frame 3D vector in direction of the desired body z axis

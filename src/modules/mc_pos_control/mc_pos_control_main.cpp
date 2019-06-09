@@ -688,7 +688,8 @@ MulticopterPositionControl::run()
 			_flight_tasks.updateVelocityControllerIO(Vector3f(local_pos_sp.x, local_pos_sp.y, local_pos_sp.z), local_pos_sp.thrust);
 
 			// Fill attitude setpoint. Attitude is computed from yaw and thrust setpoint.
-			_att_sp = ControlMath::thrustToAttitude(matrix::Vector3f(local_pos_sp.thrust), local_pos_sp.yaw);
+			//_att_sp = ControlMath::thrustToAttitude(matrix::Vector3f(local_pos_sp.thrust), local_pos_sp.yaw);
+			_att_sp = ControlMath::accelerationToAttitude(Vector3f(local_pos_sp.acceleration), local_pos_sp.yaw, _param_mpc_thr_hover.get());
 			_att_sp.yaw_sp_move_rate = local_pos_sp.yawspeed;
 			_att_sp.fw_control_yaw = false;
 			_att_sp.apply_flaps = false;
