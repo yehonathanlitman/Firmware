@@ -79,6 +79,7 @@ private:
 
 	orb_advert_t _constraints_pub{nullptr};  	/**< constraints publication */
 	orb_advert_t _mavlink_log_pub{nullptr};	 	/**< Mavlink log uORB handle */
+	orb_advert_t _obstacle_distance_pub{nullptr}; /**< obstacle_distance publication */
 
 	uORB::SubscriptionPollable<obstacle_distance_s> *_sub_obstacle_distance{nullptr}; /**< obstacle distances received form a range sensor */
 	uORB::SubscriptionPollable<distance_sensor_s>
@@ -128,6 +129,7 @@ private:
 					  const matrix::Vector2f &curr_vel);
 
 	void publishConstrainedSetpoint(const matrix::Vector2f &original_setpoint, const matrix::Vector2f &adapted_setpoint);
+	void publishObstacleDistance(obstacle_distance_s &obstacle);
 
 	void updateOffboardObstacleDistance(obstacle_distance_s &obstacle);
 	void updateDistanceSensor(obstacle_distance_s &obstacle);
