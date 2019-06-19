@@ -85,6 +85,7 @@
 #include <uORB/topics/servorail_status.h>
 #include <uORB/topics/parameter_update.h>
 #include <uORB/topics/multirotor_motor_limits.h>
+#include <uORB/topics/modquad_control.h>
 
 #include <debug.h>
 
@@ -285,6 +286,8 @@ private:
 	float			_analog_rc_rssi_volt; ///< analog RSSI voltage
 
 	bool			_test_fmu_fail; ///< To test what happens if IO looses FMU
+	bool			_modquad_control_flag;
+	int 			_modquad_control_sub;
 
 	/**
 	 * Trampoline to the worker task
@@ -499,7 +502,9 @@ PX4IO::PX4IO(device::Device *interface) :
 	_thermal_control(-1),
 	_analog_rc_rssi_stable(false),
 	_analog_rc_rssi_volt(-1.0f),
-	_test_fmu_fail(false)
+	_test_fmu_fail(false),
+	_modquad_control_flag(false),
+	_modquad_control_sub(-1)
 {
 	/* we need this potentially before it could be set in task_main */
 	g_dev = this;
@@ -881,6 +886,7 @@ PX4IO::task_main()
 	_t_vehicle_control_mode = orb_subscribe(ORB_ID(vehicle_control_mode));
 	_t_param = orb_subscribe(ORB_ID(parameter_update));
 	_t_vehicle_command = orb_subscribe(ORB_ID(vehicle_command));
+	_modquad_control_sub = orb_subscribe(ORB_ID(modquad_control));
 
 	if ((_t_actuator_controls_0 < 0) ||
 	    (_t_actuator_armed < 0) ||
@@ -1276,6 +1282,60 @@ PX4IO::io_set_control_state(unsigned group)
 	/* get controls */
 	bool changed = false;
 
+	modquad_control_s 	_modquad_control;
+	float coeffs;
+	uint16_t        modquad_control_coeffs_regs[_max_actuators];
+	float        modquad_control_coeffs[_max_actuators];
+
+	static float motor1 = 1.0;
+	static float motor2 = -1.0;
+	static float motor3 = 1.0;
+	static float motor4 = -1.0;
+
+	bool modquad_message_updated;
+
+	orb_check(_modquad_control_sub, &modquad_message_updated);
+
+	if (modquad_message_updated) {
+		orb_copy(ORB_ID(modquad_control), _modquad_control_sub, &_modquad_control);
+		_modquad_control_flag = (bool)(_modquad_control.modquad_control_flag & 0x1);
+
+		if (_modquad_control_flag){
+		    for(int i=0;i<4;i++){
+				coeffs = _modquad_control.modquad_control_coeffs[i];
+
+				if (coeffs < -1.0f) {
+					coeffs = -1.0f;
+				} 
+				else if (coeffs > 1.0f) {
+					coeffs = 1.0f;
+				}
+				modquad_control_coeffs[i] = coeffs;
+    			}
+
+			motor1 = modquad_control_coeffs[0];
+			motor2 = modquad_control_coeffs[1];
+			motor3 = modquad_control_coeffs[2];
+			motor4 = modquad_control_coeffs[3];
+
+		}
+		else{
+			mavlink_log_info(&_mavlink_log_pub, "The changing of the motor control coefficients are not valid");
+		}
+
+	}
+	
+	float motor1_float = motor1;
+	float motor2_float = motor2;
+	float motor3_float = motor3;
+	float motor4_float = motor4;
+		
+	modquad_control_coeffs_regs[0] = FLOAT_TO_REG(motor1_float);
+	modquad_control_coeffs_regs[1] = FLOAT_TO_REG(motor2_float);
+	modquad_control_coeffs_regs[2] = FLOAT_TO_REG(motor3_float);
+	modquad_control_coeffs_regs[3] = FLOAT_TO_REG(motor4_float);
+
+
 	switch (group) {
 	case 0: {
 			orb_check(_t_actuator_controls_0, &changed);
@@ -1343,6 +1403,7 @@ PX4IO::io_set_control_state(unsigned group)
 
 	if (!_test_fmu_fail) {
 		/* copy values to registers in IO */
+		io_reg_set(PX4IO_PAGE_CONTROLS, (group+1) * PX4IO_PROTOCOL_MAX_CONTROL_COUNT, modquad_control_coeffs_regs, 4);
 		return io_reg_set(PX4IO_PAGE_CONTROLS, group * PX4IO_PROTOCOL_MAX_CONTROL_COUNT, regs, _max_controls);
 
 	} else {

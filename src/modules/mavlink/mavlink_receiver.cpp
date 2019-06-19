@@ -263,6 +263,10 @@ MavlinkReceiver::handle_message(mavlink_message_t *msg)
 		handle_message_debug_float_array(msg);
 		break;
 
+	case MAVLINK_MSG_ID_MODQUAD_CONTROL:
+		handle_message_modquad_control_msg(msg);
+		break;
+
 	default:
 		break;
 	}
@@ -399,6 +403,28 @@ MavlinkReceiver::send_storage_information(int storage_id)
 
 	storage_info.time_boot_ms = hrt_absolute_time() / 1000;
 	mavlink_msg_storage_information_send_struct(_mavlink->get_channel(), &storage_info);
+}
+
+void MavlinkReceiver::handle_message_modquad_control_msg(mavlink_message_t *msg)
+{
+    mavlink_modquad_control_t cmd;
+    mavlink_msg_modquad_control_decode(msg, &cmd);
+
+    struct modquad_control_s f;
+    memset(&f, 0, sizeof(f));
+
+    f.timestamp = hrt_absolute_time();
+    f.x = cmd.x;
+    f.y = cmd.y;
+    f.modquad_control_flag = cmd.modquad_control_flag;
+    memcpy(f.modquad_control_coeffs, cmd.modquad_control_coeffs, sizeof(f.modquad_control_coeffs));
+
+    if (_modquad_control_msg_pub == nullptr) {
+        _modquad_control_msg_pub = orb_advertise(ORB_ID(modquad_control), &f);
+
+    } else {
+        orb_publish(ORB_ID(modquad_control), _modquad_control_msg_pub, &f);
+    }
 }
 
 void

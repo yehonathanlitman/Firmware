@@ -787,6 +787,12 @@ private:
 	 */
 	inline void mix_airmode_disabled(float roll, float pitch, float yaw, float thrust, float *outputs);
 
+	inline void mix_airmode_rp_modquad(float roll, float pitch, float yaw, float thrust, float *outputs, float roll_coeffs[4], float pitch_coeffs[4]);
+
+	inline void mix_airmode_rpy_modquad(float roll, float pitch, float yaw, float thrust, float *outputs, float roll_coeffs[4], float pitch_coeffs[4]);
+
+	inline void mix_airmode_disabled_modquad(float roll, float pitch, float yaw, float thrust, float *outputs, float roll_coeffs[4], float pitch_coeffs[4]);
+
 	/**
 	 * Mix yaw by updating an existing output vector (that already contains roll/pitch/thrust).
 	 *

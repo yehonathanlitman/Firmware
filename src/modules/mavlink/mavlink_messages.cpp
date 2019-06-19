@@ -103,6 +103,8 @@
 #include <uORB/topics/sensor_accel.h>
 #include <uORB/topics/sensor_gyro.h>
 #include <uORB/topics/sensor_mag.h>
+#include <uORB/topics/modquad_control.h>
+#include <v2.0/standard/mavlink.h>
 #include <uORB/topics/vehicle_air_data.h>
 #include <uORB/topics/vehicle_magnetometer.h>
 #include <uORB/uORB.h>
@@ -297,6 +299,67 @@ void get_mavlink_mode_state(const struct vehicle_status_s *const status, uint8_t
 		*mavlink_state = MAV_STATE_CRITICAL;
 	}
 }
+
+class MavlinkStreamModquadControl : public MavlinkStream
+{
+public:
+    const char *get_name() const
+    {
+        return MavlinkStreamModquadControl::get_name_static();
+    }
+    static const char *get_name_static()
+    {
+        return "MODQUAD_CONTROL";
+    }
+    static uint16_t get_id_static()
+    {
+        return MAVLINK_MSG_ID_MODQUAD_CONTROL;
+    }
+    uint16_t get_id()
+    {
+        return get_id_static();
+    }
+    static MavlinkStream *new_instance(Mavlink *mavlink)
+    {
+        return new MavlinkStreamModquadControl(mavlink);
+    }
+    unsigned get_size()
+    {
+        return MAVLINK_MSG_ID_MODQUAD_CONTROL_LEN + MAVLINK_NUM_NON_PAYLOAD_BYTES;
+    }
+
+private:
+    MavlinkOrbSubscription *_sub;
+    uint64_t _modquad_control_time;
+
+    MavlinkStreamModquadControl(MavlinkStreamModquadControl &) = delete;
+    MavlinkStreamModquadControl& operator = (const MavlinkStreamModquadControl &)= delete;
+
+protected:
+    explicit MavlinkStreamModquadControl(Mavlink *mavlink) : MavlinkStream(mavlink),
+        _sub(_mavlink->add_orb_subscription(ORB_ID(modquad_control))),  // make sure you enter the name of your uORB topic here
+        _modquad_control_time(0)
+    {}
+
+    bool send(const hrt_abstime t)
+    {
+        struct modquad_control_s _modquad_control = {}; 
+
+        if (_sub->update(&_modquad_control_time, &_modquad_control)) {
+            mavlink_modquad_control_t _msg_modquad_control;
+
+            _msg_modquad_control.time_usec = _modquad_control.timestamp;
+            _msg_modquad_control.x = _modquad_control.x;
+            _msg_modquad_control.y  = _modquad_control.y;
+	    memcpy(_modquad_control.modquad_control_coeffs, _msg_modquad_control.modquad_control_coeffs, sizeof(_modquad_control.modquad_control_coeffs));
+            _msg_modquad_control.modquad_control_flag = _modquad_control.modquad_control_flag;
+
+            mavlink_msg_modquad_control_send_struct(_mavlink->get_channel(), &_msg_modquad_control);
+        }
+
+        return true;
+    }
+};
 
 
 class MavlinkStreamHeartbeat : public MavlinkStream
@@ -4892,7 +4955,8 @@ static const StreamListItem streams_list[] = {
 	StreamListItem(&MavlinkStreamHighLatency2::new_instance, &MavlinkStreamHighLatency2::get_name_static, &MavlinkStreamHighLatency2::get_id_static),
 	StreamListItem(&MavlinkStreamGroundTruth::new_instance, &MavlinkStreamGroundTruth::get_name_static, &MavlinkStreamGroundTruth::get_id_static),
 	StreamListItem(&MavlinkStreamPing::new_instance, &MavlinkStreamPing::get_name_static, &MavlinkStreamPing::get_id_static),
-	StreamListItem(&MavlinkStreamOrbitStatus::new_instance, &MavlinkStreamOrbitStatus::get_name_static, &MavlinkStreamOrbitStatus::get_id_static)
+	StreamListItem(&MavlinkStreamOrbitStatus::new_instance, &MavlinkStreamOrbitStatus::get_name_static, &MavlinkStreamOrbitStatus::get_id_static),
+	StreamListItem(&MavlinkStreamModquadControl::new_instance, &MavlinkStreamModquadControl::get_name_static, &MavlinkStreamModquadControl::get_id_static)
 };
 
 const char *get_stream_name(const uint16_t msg_id)
