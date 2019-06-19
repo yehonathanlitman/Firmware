@@ -45,7 +45,7 @@
 
 #include <mathlib/mathlib.h>
 
-#define MODQUAD_CONTROL
+#define MODQUAD_CONTROL //To use normal quadrotor control, uncomment this line
 
 #ifdef MIXER_MULTIROTOR_USE_MOCK_GEOMETRY
 enum class MultirotorGeometry : MultirotorGeometryUnderlyingType {
@@ -279,7 +279,7 @@ void MultirotorMixer::mix_airmode_rp_modquad(float roll, float pitch, float yaw,
 	for (unsigned i = 0; i < _rotor_count; i++) {
 		outputs[i] = roll * fabsf(_rotors[i].roll_scale) * roll_coeffs[i]+
 			     pitch * fabsf(_rotors[i].pitch_scale) * pitch_coeffs[i] +
-			     thrust * _rotors[i].thrust_scale;
+			     thrust * _rotors[i].thrust_scale; //this is the only modified line for modquad
 
 		// Thrust will be used to unsaturate if needed
 		_tmp_array[i] = _rotors[i].thrust_scale;
@@ -317,7 +317,7 @@ void MultirotorMixer::mix_airmode_rpy_modquad(float roll, float pitch, float yaw
 		outputs[i] = roll * fabsf(_rotors[i].roll_scale) * roll_coeffs[i] +
 			     pitch * fabsf(_rotors[i].pitch_scale) * pitch_coeffs[i] +
 			     yaw * _rotors[i].yaw_scale +
-			     thrust * _rotors[i].thrust_scale;
+			     thrust * _rotors[i].thrust_scale; //this is the only modified line for modquad
 
 		// Thrust will be used to unsaturate if needed
 		_tmp_array[i] = _rotors[i].thrust_scale;
@@ -429,13 +429,15 @@ MultirotorMixer::mix(float *outputs, unsigned space)
 
 #ifdef MODQUAD_CONTROL
 
-	float x_plusd  = get_control(1, 0);
+	float x_plusd  = get_control(1, 0);//get coefficients from the group we stored in px4io.cpp
 	float x_minusd  = get_control(1, 1);
 	float y_plusd  = get_control(1, 2);
 	float y_minusd  = get_control(1, 3);
+	//split coefficients to roll and pitch components
 	float coeffs_roll[4] = {y_minusd, y_plusd, y_plusd, y_minusd};
 	float coeffs_pitch[4] = {x_plusd, x_minusd, x_plusd, x_minusd};
 
+	//modified mixer methods for every single airmode, just in case (see MC_AIRMODE parameter)
 	switch (_airmode) {
 	case Airmode::roll_pitch:
 		mix_airmode_rp_modquad(roll, pitch, yaw, thrust, outputs, coeffs_roll, coeffs_pitch);

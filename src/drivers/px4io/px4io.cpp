@@ -286,8 +286,8 @@ private:
 	float			_analog_rc_rssi_volt; ///< analog RSSI voltage
 
 	bool			_test_fmu_fail; ///< To test what happens if IO looses FMU
-	bool			_modquad_control_flag;
-	int 			_modquad_control_sub;
+	bool			_modquad_control_flag; //check if modquad control is enabled or not
+	int 			_modquad_control_sub; //subscribe to incoming modquad messages
 
 	/**
 	 * Trampoline to the worker task
@@ -1274,19 +1274,21 @@ PX4IO::io_set_control_groups()
 }
 
 int
-PX4IO::io_set_control_state(unsigned group)
+PX4IO::io_set_control_state(unsigned group) //NOTE: this is io_set_control_state for modquad
 {
+//FIXME: The modquad portion of the code is NOT well formatted and should be revised
 	actuator_controls_s	controls;	///< actuator outputs
 	uint16_t 		regs[_max_actuators];
 
 	/* get controls */
 	bool changed = false;
 
-	modquad_control_s 	_modquad_control;
-	float coeffs;
-	uint16_t        modquad_control_coeffs_regs[_max_actuators];
+	modquad_control_s 	_modquad_control; //modquad control struct used to receive the mavlink msg
+	float coeffs; 
+	uint16_t        modquad_control_coeffs_regs[_max_actuators]; //registers to store modquad coefficients
 	float        modquad_control_coeffs[_max_actuators];
 
+	//Default coefficients for when no modquad msgs are received
 	static float motor1 = 1.0;
 	static float motor2 = -1.0;
 	static float motor3 = 1.0;
@@ -1294,13 +1296,15 @@ PX4IO::io_set_control_state(unsigned group)
 
 	bool modquad_message_updated;
 
-	orb_check(_modquad_control_sub, &modquad_message_updated);
+	orb_check(_modquad_control_sub, &modquad_message_updated); //check if a new modquad msg came in
 
 	if (modquad_message_updated) {
 		orb_copy(ORB_ID(modquad_control), _modquad_control_sub, &_modquad_control);
+		//copy the modquad msg received by the modquad subscriber to the modquad struct
 		_modquad_control_flag = (bool)(_modquad_control.modquad_control_flag & 0x1);
+		//the control flag should be true when a modquad msg is received
 
-		if (_modquad_control_flag){
+		if (_modquad_control_flag){ //reassign motor coefficients
 		    for(int i=0;i<4;i++){
 				coeffs = _modquad_control.modquad_control_coeffs[i];
 
@@ -1321,15 +1325,17 @@ PX4IO::io_set_control_state(unsigned group)
 		}
 		else{
 			mavlink_log_info(&_mavlink_log_pub, "The changing of the motor control coefficients are not valid");
-		}
+		}//just a warning, can be removed
 
 	}
-	
+
+	//static float to float	conversion? Likely unnecessary
 	float motor1_float = motor1;
 	float motor2_float = motor2;
 	float motor3_float = motor3;
 	float motor4_float = motor4;
 		
+	//store coefficients in the registers
 	modquad_control_coeffs_regs[0] = FLOAT_TO_REG(motor1_float);
 	modquad_control_coeffs_regs[1] = FLOAT_TO_REG(motor2_float);
 	modquad_control_coeffs_regs[2] = FLOAT_TO_REG(motor3_float);
@@ -1403,7 +1409,7 @@ PX4IO::io_set_control_state(unsigned group)
 
 	if (!_test_fmu_fail) {
 		/* copy values to registers in IO */
-		io_reg_set(PX4IO_PAGE_CONTROLS, (group+1) * PX4IO_PROTOCOL_MAX_CONTROL_COUNT, modquad_control_coeffs_regs, 4);
+		io_reg_set(PX4IO_PAGE_CONTROLS, (group+1) * PX4IO_PROTOCOL_MAX_CONTROL_COUNT, modquad_control_coeffs_regs, 4);//store modquad coefficients in the group + 1. We can now get the coefficients with get_control()
 		return io_reg_set(PX4IO_PAGE_CONTROLS, group * PX4IO_PROTOCOL_MAX_CONTROL_COUNT, regs, _max_controls);
 
 	} else {

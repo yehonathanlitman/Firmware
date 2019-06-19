@@ -17,6 +17,12 @@ This repository holds the [PX4](http://px4.io) flight control solution for drone
 * Releases: [Downloads](https://github.com/PX4/Firmware/releases)
 
 
+## ModQuad Users
+The changes in code are documented. In addition, the MODQUAD message stream has been enabled and the IMU stream rate was increased. We mostly followed these links:
+[MAVROS](https://dev.px4.io/master/en/ros/mavros_custom_messages.html)
+[MAVLINK](https://dev.px4.io/v1.9.0/en/middleware/mavlink.html)
+[uORB](https://dev.px4.io/v1.9.0/en/middleware/uorb.html) 
+
 ## PX4 Users
 
 The [PX4 User Guide](https://docs.px4.io/en/) explains how to assemble [supported vehicles](https://docs.px4.io/en/airframes/airframe_reference.html) and fly drones with PX4.
