@@ -300,6 +300,10 @@ void Simulator::handle_message(const mavlink_message_t *msg)
 		handle_message_optical_flow(msg);
 		break;
 
+        case MAVLINK_MSG_ID_MODQUAD_CONTROL:
+                handle_message_modquad_control(msg);
+                break;
+
 	case MAVLINK_MSG_ID_ODOMETRY:
 		handle_message_odometry(msg);
 		break;
@@ -533,6 +537,13 @@ void Simulator::handle_message_optical_flow(const mavlink_message_t *msg)
 	mavlink_hil_optical_flow_t flow;
 	mavlink_msg_hil_optical_flow_decode(msg, &flow);
 	publish_flow_topic(&flow);
+}
+
+void Simulator::handle_message_modquad_control(const mavlink_message_t *msg)
+{
+	mavlink_modquad_control_t cmd;
+	mavlink_msg_modquad_control_decode(msg, &cmd);
+	publish_modquad_topic(&cmd);
 }
 
 void Simulator::handle_message_rc_channels(const mavlink_message_t *msg)
@@ -1062,6 +1073,24 @@ int Simulator::publish_sensor_topics(const mavlink_hil_sensor_t *imu)
 		int baro_multi;
 		orb_publish_auto(ORB_ID(sensor_baro), &_baro_pub, &baro, &baro_multi, ORB_PRIO_HIGH);
 	}
+
+	return OK;
+}
+
+int Simulator::publish_modquad_topic(const mavlink_modquad_control_t *modquad_mavlink)
+{
+	uint64_t timestamp = hrt_absolute_time();
+
+	struct modquad_control_s mod;
+
+	mod.timestamp = timestamp;
+	mod.x = 0.0;
+	mod.y = 0.0;
+	mod.modquad_control_flag = modquad_mavlink->modquad_control_flag;
+	memcpy(mod.modquad_control_coeffs, modquad_mavlink->modquad_control_coeffs, sizeof(mod.modquad_control_coeffs));
+
+	int modquad_multi;
+	orb_publish_auto(ORB_ID(modquad_control), &_modquad_control_msg_pub, &mod, &modquad_multi, ORB_PRIO_HIGH);
 
 	return OK;
 }

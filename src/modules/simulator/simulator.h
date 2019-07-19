@@ -54,6 +54,7 @@
 #include <uORB/topics/battery_status.h>
 #include <uORB/topics/irlock_report.h>
 #include <uORB/topics/parameter_update.h>
+#include <uORB/topics/modquad_control.h>
 #include <drivers/drv_accel.h>
 #include <drivers/drv_gyro.h>
 #include <drivers/drv_baro.h>
@@ -67,6 +68,7 @@
 #include <uORB/topics/distance_sensor.h>
 #include <v2.0/mavlink_types.h>
 #include <v2.0/common/mavlink.h>
+#include <v2.0/standard/mavlink_msg_modquad_control.h>
 #include <lib/ecl/geo/geo.h>
 
 namespace simulator
@@ -278,6 +280,7 @@ private:
 	int publish_flow_topic(const mavlink_hil_optical_flow_t *flow);
 	int publish_odometry_topic(const mavlink_message_t *odom_mavlink);
 	int publish_distance_topic(const mavlink_distance_sensor_t *dist);
+	int publish_modquad_topic(const mavlink_modquad_control_t *modquad_mavlink);
 
 	static Simulator *_instance;
 
@@ -308,6 +311,7 @@ private:
 	orb_advert_t _irlock_report_pub{nullptr};
 	orb_advert_t _mag_pub{nullptr};
 	orb_advert_t _visual_odometry_pub{nullptr};
+	orb_advert_t _modquad_control_msg_pub{nullptr};
 
 	int _param_sub{-1};
 
@@ -340,6 +344,7 @@ private:
 	void handle_message_optical_flow(const mavlink_message_t *msg);
 	void handle_message_rc_channels(const mavlink_message_t *msg);
 	void handle_message_vision_position_estimate(const mavlink_message_t *msg);
+	void handle_message_modquad_control(const mavlink_message_t *msg);
 
 	void parameters_update(bool force);
 	void poll_topics();

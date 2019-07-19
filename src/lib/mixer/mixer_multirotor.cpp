@@ -436,6 +436,8 @@ MultirotorMixer::mix(float *outputs, unsigned space)
 	//split coefficients to roll and pitch components
 	float coeffs_roll[4] = {y_minusd, y_plusd, y_plusd, y_minusd};
 	float coeffs_pitch[4] = {x_plusd, x_minusd, x_plusd, x_minusd};
+//	float coeffs_roll[4] = {-1.0, 1.0, 1.0, -1.0};
+//	float coeffs_pitch[4] = {1.0, -1.0, 1.0, -1.0};
 
 	//modified mixer methods for every single airmode, just in case (see MC_AIRMODE parameter)
 	switch (_airmode) {
