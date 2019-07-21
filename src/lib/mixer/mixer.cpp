@@ -187,7 +187,7 @@ NullMixer::NullMixer() :
 }
 
 unsigned
-NullMixer::mix(float *outputs, unsigned space)
+NullMixer::mix(float *outputs, unsigned space, float coeffs[4])
 {
 	if (space > 0) {
 		*outputs = NAN;

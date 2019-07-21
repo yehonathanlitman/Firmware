@@ -304,7 +304,7 @@ out:
 }
 
 unsigned
-SimpleMixer::mix(float *outputs, unsigned space)
+SimpleMixer::mix(float *outputs, unsigned space, float coeffs[4])
 {
 	float		sum = 0.0f;
 

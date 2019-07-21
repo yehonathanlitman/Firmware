@@ -160,12 +160,14 @@ PWMSim::run()
 	_current_update_rate = 0;
 
 	_armed_sub = orb_subscribe(ORB_ID(actuator_armed));
+	_modquad_control_sub = orb_subscribe(ORB_ID(modquad_control));
 
 	/* advertise the mixed control outputs, insist on the first group output */
 	_outputs_pub = orb_advertise(ORB_ID(actuator_outputs), &_actuator_outputs);
 
 	update_params();
 	int params_sub = orb_subscribe(ORB_ID(parameter_update));
+	float modquad_coeffs[4] = {1.0, -1.0, 1.0, -1.0};
 
 	/* loop until killed */
 	while (!should_exit()) {
@@ -231,13 +233,28 @@ PWMSim::run()
 				poll_id++;
 			}
 		}
+		bool modquad_message_updated;
+
+		orb_check(_modquad_control_sub, &modquad_message_updated);
+		if(modquad_message_updated){
+			orb_copy(ORB_ID(modquad_control), _modquad_control_sub, &_modquad_control);
+			for (int i = 0; i < 4; i++){
+				modquad_coeffs[i] = _modquad_control.modquad_control_coeffs[i];
+				if(modquad_coeffs[i] < -1.0f){
+					modquad_coeffs[i] = -1.0f;
+				}
+				else if(modquad_coeffs[i] > 1.0f){
+					modquad_coeffs[i] = 1.0f;
+				}
+			}
+		}
 
 		/* can we mix? */
 		/* We also publish if not armed, this way we make sure SITL gets feedback. */
 		if (_mixers != nullptr) {
 
 			/* do mixing */
-			_actuator_outputs.noutputs = _mixers->mix(&_actuator_outputs.output[0], _num_outputs);
+			_actuator_outputs.noutputs = _mixers->mix(&_actuator_outputs.output[0], _num_outputs, modquad_coeffs);
 
 			/* disable unused ports by setting their output to NaN */
 			const size_t actuator_outputs_size = sizeof(_actuator_outputs.output) / sizeof(_actuator_outputs.output[0]);

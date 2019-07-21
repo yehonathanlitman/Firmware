@@ -198,7 +198,7 @@ HelicopterMixer::from_text(Mixer::ControlCallback control_cb, uintptr_t cb_handl
 }
 
 unsigned
-HelicopterMixer::mix(float *outputs, unsigned space)
+HelicopterMixer::mix(float *outputs, unsigned space, float coeffs[4])
 {
 	/* Find index to use for curves */
 	float thrust_cmd = get_control(0, 3);

@@ -103,13 +103,13 @@ MixerGroup::reset()
 }
 
 unsigned
-MixerGroup::mix(float *outputs, unsigned space)
+MixerGroup::mix(float *outputs, unsigned space, float coeffs[4])
 {
 	Mixer	*mixer = _first;
 	unsigned index = 0;
 
 	while ((mixer != nullptr) && (index < space)) {
-		index += mixer->mix(outputs + index, space - index);
+		index += mixer->mix(outputs + index, space - index, coeffs);
 		mixer = mixer->_next;
 	}
 

@@ -50,6 +50,7 @@
 #include <uORB/topics/actuator_controls.h>
 #include <uORB/topics/actuator_outputs.h>
 #include <uORB/topics/parameter_update.h>
+#include <uORB/topics/modquad_control.h>
 
 class PWMSim : public cdev::CDev, public ModuleBase<PWMSim>
 {
@@ -109,8 +110,11 @@ private:
 	unsigned	_poll_fds_num{0};
 
 	int		_armed_sub{-1};
+	int		_modquad_control_sub{-1};
+	bool		_modquad_control_flag{false};
 
 	actuator_outputs_s _actuator_outputs = {};
+	modquad_control_s _modquad_control = {};
 	orb_advert_t	_outputs_pub{nullptr};
 	orb_advert_t	_mixer_status{nullptr};
 

@@ -45,7 +45,8 @@
 
 #include <mathlib/mathlib.h>
 
-#define MODQUAD_CONTROL //To use normal quadrotor control, uncomment this line
+//#define MODQUAD_CONTROL //To use normal quadrotor control, uncomment this line
+#define MODQUAD_SIM
 
 #ifdef MIXER_MULTIROTOR_USE_MOCK_GEOMETRY
 enum class MultirotorGeometry : MultirotorGeometryUnderlyingType {
@@ -417,7 +418,7 @@ void MultirotorMixer::mix_yaw(float yaw, float *outputs)
 }
 
 unsigned
-MultirotorMixer::mix(float *outputs, unsigned space)
+MultirotorMixer::mix(float *outputs, unsigned space, float coeffs[4])
 {
 	float roll    = math::constrain(get_control(0, 0) * _roll_scale, -1.0f, 1.0f);
 	float pitch   = math::constrain(get_control(0, 1) * _pitch_scale, -1.0f, 1.0f);
@@ -428,6 +429,7 @@ MultirotorMixer::mix(float *outputs, unsigned space)
 	_saturation_status.value = 0;
 
 #ifdef MODQUAD_CONTROL
+#undef MODQUAD_SIM
 
 	float x_plusd  = get_control(1, 0);//get coefficients from the group we stored in px4io.cpp
 	float x_minusd  = get_control(1, 1);
@@ -438,6 +440,28 @@ MultirotorMixer::mix(float *outputs, unsigned space)
 	float coeffs_pitch[4] = {x_plusd, x_minusd, x_plusd, x_minusd};
 //	float coeffs_roll[4] = {-1.0, 1.0, 1.0, -1.0};
 //	float coeffs_pitch[4] = {1.0, -1.0, 1.0, -1.0};
+
+	//modified mixer methods for every single airmode, just in case (see MC_AIRMODE parameter)
+	switch (_airmode) {
+	case Airmode::roll_pitch:
+		mix_airmode_rp_modquad(roll, pitch, yaw, thrust, outputs, coeffs_roll, coeffs_pitch);
+		break;
+
+	case Airmode::roll_pitch_yaw:
+		mix_airmode_rpy_modquad(roll, pitch, yaw, thrust, outputs, coeffs_roll, coeffs_pitch);
+		break;
+
+	case Airmode::disabled:
+	default: // just in case: default to disabled
+		mix_airmode_disabled_modquad(roll, pitch, yaw, thrust, outputs, coeffs_roll, coeffs_pitch);
+		break;
+	}
+
+#elif defined(MODQUAD_SIM)
+
+	//split coefficients to roll and pitch components
+	float coeffs_roll[4] = {coeffs[3], coeffs[2], coeffs[2], coeffs[3]};
+	float coeffs_pitch[4] = {coeffs[0], coeffs[1], coeffs[0], coeffs[1]};
 
 	//modified mixer methods for every single airmode, just in case (see MC_AIRMODE parameter)
 	switch (_airmode) {

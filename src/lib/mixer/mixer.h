@@ -200,7 +200,7 @@ public:
 	 * @param space			The number of available entries in the output array;
 	 * @return			The number of entries in the output array that were populated.
 	 */
-	virtual unsigned		mix(float *outputs, unsigned space) = 0;
+	virtual unsigned		mix(float *outputs, unsigned space, float coeffs[4]) = 0;
 
 	/**
 	 * Get the saturation status.
@@ -332,7 +332,7 @@ public:
 	MixerGroup(ControlCallback control_cb, uintptr_t cb_handle);
 	~MixerGroup();
 
-	unsigned		mix(float *outputs, unsigned space) override;
+	unsigned		mix(float *outputs, unsigned space, float coeffs[4]) override;
 	uint16_t		get_saturation_status(void) override;
 	void			groups_required(uint32_t &groups) override;
 
@@ -483,7 +483,7 @@ public:
 	 */
 	static NullMixer		*from_text(const char *buf, unsigned &buflen);
 
-	unsigned		mix(float *outputs, unsigned space) override;
+	unsigned		mix(float *outputs, unsigned space, float coeffs[4]) override;
 	uint16_t		get_saturation_status(void) override;
 	void			groups_required(uint32_t &groups) override;
 	unsigned set_trim(float trim) override
@@ -555,7 +555,7 @@ public:
 	static SimpleMixer		*pwm_input(Mixer::ControlCallback control_cb, uintptr_t cb_handle, unsigned input, uint16_t min,
 			uint16_t mid, uint16_t max);
 
-	unsigned		mix(float *outputs, unsigned space) override;
+	unsigned		mix(float *outputs, unsigned space, float coeffs[4]) override;
 	uint16_t		get_saturation_status(void) override;
 	void			groups_required(uint32_t &groups) override;
 
@@ -676,7 +676,7 @@ public:
 	static MultirotorMixer		*from_text(Mixer::ControlCallback control_cb, uintptr_t cb_handle, const char *buf,
 			unsigned &buflen);
 
-	unsigned		mix(float *outputs, unsigned space) override;
+	unsigned		mix(float *outputs, unsigned space, float coeffs[4]) override;
 	uint16_t		get_saturation_status(void) override;
 	void			groups_required(uint32_t &groups) override;
 
@@ -890,7 +890,7 @@ public:
 	static HelicopterMixer		*from_text(Mixer::ControlCallback control_cb, uintptr_t cb_handle, const char *buf,
 			unsigned &buflen);
 
-	unsigned		mix(float *outputs, unsigned space) override;
+	unsigned		mix(float *outputs, unsigned space, float coeffs[4]) override;
 	void			groups_required(uint32_t &groups) override;
 
 	uint16_t		get_saturation_status(void) override { return 0; }
